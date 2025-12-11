@@ -13,13 +13,16 @@ import http from 'http';
 const server = http.createServer(app);
 const port = 4155;
 
-import { login } from './librus_connection/connection.js';
-
-app.get('/login', async (req, res) => {
-    const result = await login();
-    res.send(result);
-});
+import { puppeteerLogin } from './librus/browser.js';
+(async () => {
+    try {
+        await puppeteerLogin();
+        server.close()
+    } catch (err) {
+        console.error(err);
+    }
+})();
 
 server.listen(port, () => {
     console.log(`Running on http://localhost:${port}`)
-})
+});
