@@ -12,12 +12,15 @@ const app = express();
 import http from 'http';
 const server = http.createServer(app);
 const port = 4155;
+import ocenyRouter from "./routes/get.js";
+
+app.use("/", ocenyRouter);
 
 import { puppeteerLogin } from './librus/browser.js';
 (async () => {
     try {
         await puppeteerLogin();
-        server.close()
+        //server.close()
     } catch (err) {
         console.error(err);
     }

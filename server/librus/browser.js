@@ -43,6 +43,8 @@ export async function puppeteerLogin() {
         subjects[i] = subject;
     }
 
+    console.log(subjects);
+
     await page.close();
 
     await browser.close();
