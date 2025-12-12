@@ -13,10 +13,11 @@ import http from 'http';
 const server = http.createServer(app);
 const port = 4155;
 
-import { puppeteerLogin } from './librus/browser.js';
+import LibrusAPI from './librus/librusAPI.js';
+const api = await LibrusAPI.create();
 (async () => {
     try {
-        await puppeteerLogin();
+        await api.autoLogIn();
         server.close()
     } catch (err) {
         console.error(err);
