@@ -21,7 +21,6 @@ const api = await LibrusAPI.create();
 (async () => {
     try {
         await api.autoLogIn();
-        server.close()
     } catch (err) {
         console.error(err);
     }
