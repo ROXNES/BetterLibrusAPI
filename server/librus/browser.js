@@ -19,10 +19,31 @@ export async function puppeteerLogin() {
 
     await page.click('figure.figureContainer.gorzowyellow');
 
-    await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+    await page.waitForNavigation({ waitUntil: 'networkidle0' });
     await page.waitForNavigation({ waitUntil: 'networkidle0' });
 
-    console.log(await page.$eval('body', el => el.outerHTML));
+    const subjects = await page.$$eval('tbody > tr:not(:has(table)):not([class^="przedmioty_"]):not(.detail-grades):not(.bolded)', 
+        trs => {
+            const filtered = trs
+            .filter(tr => tr.children.length >= 2)
+            .map(tr => Array.from(tr.children).map(td => td.textContent.trim()));
+            return filtered.slice(3, filtered.length - 4);
+        }
+    );
+
+    for (let i = 0; i < subjects.length; i++) {
+        let subject = subjects[i]
+        if(subject.length <= 5) {
+            subjects.splice(i, 1);
+        }
+        subject = subject.slice(1);
+        subject.splice(2, 1);
+        subject.splice(5, 1);
+        subject.splice(6, 1);
+        subjects[i] = subject;
+    }
 
     await page.close();
+
+    await browser.close();
 }
