@@ -16,11 +16,12 @@ import ocenyRouter from "./routes/get.js";
 
 app.use("/", ocenyRouter);
 
-import { puppeteerLogin } from './librus/browser.js';
+import LibrusAPI from './librus/librusAPI.js';
+const api = await LibrusAPI.create();
 (async () => {
     try {
-        await puppeteerLogin();
-        //server.close()
+        await api.autoLogIn();
+        server.close()
     } catch (err) {
         console.error(err);
     }
