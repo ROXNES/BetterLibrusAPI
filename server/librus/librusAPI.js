@@ -51,6 +51,18 @@ export default class LibrusAPI {
         return messageContent;
     }
 
+    async getAnnouncements(){
+
+        const page = await this.#login();
+
+        const announcements = await this.#parseAnnouncements(page);
+
+        await page.close();
+
+        return announcements;
+
+    }
+
     async #login() {
         const page = await this.browser.newPage();
 
@@ -64,6 +76,43 @@ export default class LibrusAPI {
         await page.waitForNavigation({ waitUntil: 'networkidle0' });
 
         return page;
+    }
+    async #parseAnnouncements(page){
+
+        page.click('#icon-ogloszenia');
+
+        await page.waitForNavigation({ waitUntil: 'networkidle0' });
+
+        const announcementTopics = await page.$$eval('table.decorated.big.center.printable.margin-top > thead > tr > td', 
+            tds => tds.map(td=>td.textContent.trim())
+        );
+
+        const announcementContents = await page.$$eval('table.decorated.big.center.printable.margin-top > tbody', 
+            bodies => bodies.map(body => {
+                const author = body.children[0].children[1].textContent.trim();
+                const message = body.children[2].children[1].textContent.trim();
+                const date = body.children[1].children[1].textContent.trim();
+
+                return [
+                    author,
+                    message,
+                    date
+                ]
+            })
+        );
+        
+        const finalObject = [];
+
+        for (let i = 0; i < announcementTopics.length; i++) {
+            finalObject.push([
+                announcementTopics[i],
+                announcementContents[i][0],
+                announcementContents[i][1],
+                announcementContents[i][2]
+            ]);
+        }
+
+        return finalObject;
     }
 
     async #gradesParse(page) {
