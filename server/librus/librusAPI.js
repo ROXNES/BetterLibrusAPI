@@ -14,21 +14,33 @@ export default class LibrusAPI {
     }
 
     async autoLogIn() {
-        const page = this.#login();
+        const page = await this.#login();
 
-        const grades = this.#ocenyParse();
+        const grades = await this.#ocenyParse(page);
 
         await page.close();
     }
 
     async getOceny() {
-        const page = this.#login();
+        const page = await this.#login();
 
-        const grades = this.#ocenyParse();
+        const grades = await this.#ocenyParse(page);
 
         await page.close();
 
         return grades;
+    }
+
+    async getAnnouncements(){
+
+        const page = await this.#login();
+
+        const announcements = await this.#parseAnnouncements(page);
+
+        await page.close();
+
+        return announcements;
+
     }
 
     async #login() {
@@ -46,7 +58,36 @@ export default class LibrusAPI {
         return page;
     }
 
-    async #ocenyParse() {
+    async #parseAnnouncements(page){
+
+        page.click('#icon-ogloszenia');
+
+        await page.waitForNavigation({ waitUntil: 'networkidle0' });
+
+        const announcementTopics = await page.$$eval('table.decorated.big.center.printable.margin-top > thead > tr > td', 
+            tds => tds.map(td=>td.textContent.trim())
+        );
+
+        const announcementContents = await page.$$eval('table.decorated.big.center.printable.margin-top > tbody', 
+            bodies => bodies.map(body => {
+                const author = body.children[0].children[1].textContent.trim();
+                const message = body.children[2].children[1].textContent.trim();
+                const date = body.children[1].children[1].textContent.trim();
+
+                return [
+                    author,
+                    message,
+                    date
+                ]
+            })
+        );
+        
+        
+        return announcementContents;
+
+    }
+
+    async #ocenyParse(page) {
         const subjects = await page.$$eval('tbody > tr:not(:has(table)):not([class^="przedmioty_"]):not(.detail-grades):not(.bolded)', 
             trs => {
                 const filtered = trs
