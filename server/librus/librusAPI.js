@@ -16,15 +16,15 @@ export default class LibrusAPI {
     async autoLogIn() {
         const page = await this.#login();
 
-        const grades = await this.#ocenyParse(page);
+        const grades = await this.#gradesParse(page);
 
         await page.close();
     }
 
-    async getOceny() {
+    async getGrades() {
         const page = await this.#login();
 
-        const grades = await this.#ocenyParse(page);
+        const grades = await this.#gradesParse(page);
 
         await page.close();
 
@@ -66,7 +66,7 @@ export default class LibrusAPI {
         return page;
     }
 
-    async #ocenyParse(page) {
+    async #gradesParse(page) {
         const subjects = await page.$$eval('tbody > tr:not(:has(table)):not([class^="przedmioty_"]):not(.detail-grades):not(.bolded)', 
             trs => {
                 const filtered = trs
