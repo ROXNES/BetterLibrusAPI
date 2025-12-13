@@ -23,6 +23,8 @@ const api = await LibrusAPI.create();
         await api.autoLogIn();
     } catch (err) {
         console.error(err);
+    } finally {
+        server.close();
     }
 })();
 
