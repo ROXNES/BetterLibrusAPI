@@ -110,15 +110,21 @@ export default class LibrusAPI {
             proposedFinalGrades.push(subject[5]);
             finalGrades.push(subject[6]);
         }
-        return {
-            subjectNames,
-            semester1Grades,
-            proposedMidtermGrades,
-            midtermGrades,
-            semester2Grades,
-            proposedFinalGrades,
-            finalGrades
+        const finalObject = []
+        
+        for (let i = 0; i < subjectNames.length; i++) {
+            finalObject.push([
+                subjectNames[i],
+                semester1Grades[i],
+                proposedMidtermGrades[i],
+                midtermGrades[i],
+                semester2Grades[i],
+                proposedFinalGrades[i],
+                finalGrades[i]
+            ]);
         }
+        
+        return finalObject;
     }
 
     async #messagesParse(page) {
