@@ -1,2 +1,2 @@
-import LibrusAPI from "./LibrusAPI";
+import LibrusAPI from "./LibrusAPI.js";
 export default LibrusAPI;

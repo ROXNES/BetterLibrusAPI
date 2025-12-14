@@ -3,6 +3,7 @@
   "version": "0.3.0",
   "description": "An API that scraps your Librus data.",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
