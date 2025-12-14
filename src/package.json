@@ -1,7 +1,7 @@
 {
   "name": "librus-api",
   "version": "0.4.0",
-  "description": "An API that scraps your Librus data.",
+  "description": "An API that scrapes your Librus data.",
   "main": "index.js",
   "type": "module",
   "scripts": {
