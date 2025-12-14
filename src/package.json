@@ -1,0 +1,46 @@
+{
+  "name": "librus-api",
+  "version": "0.3.0",
+  "description": "An API that scraps your Librus data.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ROXNES/BetterLibrusAPI.git"
+  },
+  "keywords": [
+    "librus",
+    "scraper",
+    "puppeteer",
+    "grades",
+    "messages",
+    "announcements",
+    "timetable",
+    "attendance",
+    "nodejs",
+    "school",
+    "api"
+  ],
+  "author": "ROXNES",
+  "contributors": [
+    {
+      "name": "ROXNES",
+      "email": "roxnes.business@gmail.com",
+      "url": "https://github.com/ROXNES"
+    },
+    {
+      "name": "nbb18pl",
+      "url": "https://github.com/nbb18pl"
+    }
+  ],
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/ROXNES/BetterLibrusAPI/issues"
+  },
+  "homepage": "https://github.com/ROXNES/BetterLibrusAPI#readme",
+  "dependencies": {
+    "puppeteer": "^24.33.0"
+  }
+}
