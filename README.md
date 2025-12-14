@@ -27,17 +27,20 @@ That's when I came up with an idea to make an API with a server and an app to ma
 - get timetable
 - get homework
 - send messages
+- open headless browsers
 
 ## Installation
 
 ### Not available yet
 
 **Initializing**
-```javascript
+```js
 import LibrusAPI from 'librus-api';
 
-const api = await LibrusAPI.create();
+const api = await LibrusAPI.create(credentialsArray);
 ```
+
+### Documentation soon
 
 ## Support/Contact
 
