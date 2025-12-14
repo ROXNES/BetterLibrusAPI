@@ -1,8 +1,10 @@
 import puppeteer from "puppeteer";
 
 export default class LibrusAPI {
+    #browser;
+
     constructor(browser) {
-        this.browser = browser;
+        this.#browser = browser;
     }
 
     static async create() {
@@ -18,6 +20,10 @@ export default class LibrusAPI {
 
         const grades = await this.#gradesParse(page);
 
+        const messages = await this.#messagesParse(page);
+
+        const announcements = await this.#announcementsParse(page);
+
         await page.close();
     }
 
@@ -29,6 +35,14 @@ export default class LibrusAPI {
         await page.close();
 
         return grades;
+    }
+
+    async getGradeInfo(gradeInfoPath) {
+        const page = await this.#login();
+
+        const gradeInfo = await this.#gradeInfoParse(page, gradeInfoPath);
+
+        return gradeInfo;
     }
 
     async getMessages() {
@@ -55,7 +69,7 @@ export default class LibrusAPI {
 
         const page = await this.#login();
 
-        const announcements = await this.#parseAnnouncements(page);
+        const announcements = await this.#announcementsParse(page);
 
         await page.close();
 
@@ -64,7 +78,7 @@ export default class LibrusAPI {
     }
 
     async #login() {
-        const page = await this.browser.newPage();
+        const page = await this.#browser.newPage();
 
         await page.goto('https://adfslight.edukacja.gorzow.pl/LoginPage.aspx?ReturnUrl=%2f%3fwa%3dwsignin1.0%26wtrealm%3dhttps%253a%252f%252faplikacje.edukacja.gorzow.pl%253a443%252f%26wctx%3drm%253d0%2526id%253dpassive%2526ru%253d%25252f%26wct%3d2025-11-03T20%253a54%253a46Z%26rt%3d0%26rs%3d1%26fr%3d1');
         await page.type('#Username', process.env.lib_Username);
@@ -77,50 +91,31 @@ export default class LibrusAPI {
 
         return page;
     }
-    async #parseAnnouncements(page){
-
-        page.click('#icon-ogloszenia');
-
-        await page.waitForNavigation({ waitUntil: 'networkidle0' });
-
-        const announcementTopics = await page.$$eval('table.decorated.big.center.printable.margin-top > thead > tr > td', 
-            tds => tds.map(td=>td.textContent.trim())
-        );
-
-        const announcementContents = await page.$$eval('table.decorated.big.center.printable.margin-top > tbody', 
-            bodies => bodies.map(body => {
-                const author = body.children[0].children[1].textContent.trim();
-                const message = body.children[2].children[1].textContent.trim();
-                const date = body.children[1].children[1].textContent.trim();
-
-                return [
-                    author,
-                    message,
-                    date
-                ]
-            })
-        );
-        
-        const finalObject = [];
-
-        for (let i = 0; i < announcementTopics.length; i++) {
-            finalObject.push([
-                announcementTopics[i],
-                announcementContents[i][0],
-                announcementContents[i][1],
-                announcementContents[i][2]
-            ]);
-        }
-
-        return finalObject;
-    }
 
     async #gradesParse(page) {
         const subjects = await page.$$eval('tbody > tr:not(:has(table)):not([class^="przedmioty_"]):not(.detail-grades):not(.bolded)', 
             trs => {
                 const filtered = trs
                 .filter(tr => tr.children.length >= 2)
-                .map(tr => Array.from(tr.children).map(td => td.textContent.trim()));
+                .map(tr => Array.from(tr.children).map(td => {
+                    const grades = td.textContent.trim().split('\n');
+                    const gradePaths = []
+                    for (let i = 0; i < grades.length; i++) {
+                        grades[i] = grades[i].trim();
+                        gradePaths.push(td.children[i]?.children[0]?.getAttribute('href'))
+                    }
+
+                    const gradeArray = [];
+
+                    for (let i = 0; i < grades.length; i++) {
+                        gradeArray.push([
+                            grades[i],
+                            gradePaths[i]
+                        ]);
+                    }
+
+                    return gradeArray;
+                }));
                 return filtered.slice(3, filtered.length - 4);
             }
         );
@@ -142,22 +137,14 @@ export default class LibrusAPI {
             subject.splice(2, 1);
             subject.splice(5, 1);
             subject.splice(6, 1);
-            subjects[i] = subject;
-            subjectNames.push(subject[0]);
-            let grades = subject[1].split('\n');
-            for (let j = 0; j < grades.length; j++) {
-                grades[j] = grades[j].trim();
-            }
-            semester1Grades.push(grades);
-            proposedMidtermGrades.push(subject[2]);
-            midtermGrades.push(subject[3]);
-            grades = subject[4].split('\n');
-            for (let j = 0; j < grades.length; j++) {
-                grades[j] = grades[j].trim();
-            }
-            semester2Grades.push(grades);
-            proposedFinalGrades.push(subject[5]);
-            finalGrades.push(subject[6]);
+            subject[0] = subject[0][0];
+            subjectNames.push(subject[0][0]);
+            semester1Grades.push(subject[1]);
+            proposedMidtermGrades.push(subject[2][0]);
+            midtermGrades.push(subject[3][0]);
+            semester2Grades.push(subject[4]);
+            proposedFinalGrades.push(subject[5][0]);
+            finalGrades.push(subject[6][0]);
         }
         const finalObject = []
         
@@ -174,6 +161,18 @@ export default class LibrusAPI {
         }
         
         return finalObject;
+    }
+
+    async #gradeInfoParse(page, gradeInfoPath) {
+        await page.goto('https://synergia.librus.pl' + gradeInfoPath);
+
+        const gradeInfo = await page.$$eval('table.decorated.medium.center > tbody > tr > td',
+            tds => tds.map(td => {
+                return (td.textContent.trim() !== '') ? td.textContent.trim() : ((td.children[0].getAttribute('src') == '/images/aktywne.png') ? true : false);
+            })
+        )
+
+        return gradeInfo;
     }
 
     async #messagesParse(page) {
@@ -215,5 +214,43 @@ export default class LibrusAPI {
             messageInfo,
             messagecontent
         }
+    }
+
+    async #announcementsParse(page){
+
+        page.click('#icon-ogloszenia');
+
+        await page.waitForNavigation({ waitUntil: 'networkidle0' });
+
+        const announcementTopics = await page.$$eval('table.decorated.big.center.printable.margin-top > thead > tr > td', 
+            tds => tds.map(td=>td.textContent.trim())
+        );
+
+        const announcementContents = await page.$$eval('table.decorated.big.center.printable.margin-top > tbody', 
+            bodies => bodies.map(body => {
+                const author = body.children[0].children[1].textContent.trim();
+                const message = body.children[2].children[1].textContent.trim();
+                const date = body.children[1].children[1].textContent.trim();
+
+                return [
+                    author,
+                    message,
+                    date
+                ]
+            })
+        );
+        
+        const finalObject = [];
+
+        for (let i = 0; i < announcementTopics.length; i++) {
+            finalObject.push([
+                announcementTopics[i],
+                announcementContents[i][0],
+                announcementContents[i][1],
+                announcementContents[i][2]
+            ]);
+        }
+
+        return finalObject;
     }
 }
