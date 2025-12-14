@@ -15,7 +15,7 @@ export default class LibrusAPI {
         return new LibrusAPI(browser);
     }
 
-    async autoLogIn() {
+    async getAllData() {
         const page = await this.#login();
 
         const grades = await this.#gradesParse(page);
@@ -25,6 +25,12 @@ export default class LibrusAPI {
         const announcements = await this.#announcementsParse(page);
 
         await page.close();
+
+        return {
+            grades: grades,
+            messages: messages,
+            announcements: announcements
+        }
     }
 
     async getGrades() {
