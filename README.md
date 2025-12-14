@@ -1,7 +1,7 @@
 # BetterLibrusAPI
 
 ![npm](https://img.shields.io/npm/v/better-librus-api?color=purple)
-![downloads](https://img.shields.io/npm/dt/librus-api)
+![downloads](https://img.shields.io/npm/dt/better-librus-api)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
 ## Description
