@@ -1,94 +1,109 @@
 import puppeteer from "puppeteer";
 
 export default class LibrusAPI {
-    #browser;
+    #credentialsArray;
 
-    constructor(browser) {
-        this.#browser = browser;
+    constructor(credentialsArray) {
+        this.#credentialsArray = credentialsArray;
     }
 
-    static async create() {
-        const browser = await puppeteer.launch({
-            headless: false
-        });
-
-        return new LibrusAPI(browser);
+    static async create(credentialsArray) {
+        return new LibrusAPI(credentialsArray);
     }
 
     async getAllData() {
-        const page = await this.#login();
+        const result = await Promise.all(
+            this.#credentialsArray.map(async credentials => {
+                const browser = await this.#createBrowser();
 
-        const grades = await this.#gradesParse(page);
+                const page = await this.#login(browser, credentials);
 
-        const messages = await this.#messagesParse(page);
+                const grades = await this.#gradesParse(page);
 
-        const announcements = await this.#announcementsParse(page);
+                const messages = await this.#messagesParse(page);
 
-        await page.close();
+                const announcements = await this.#announcementsParse(page);
 
-        return {
-            grades: grades,
-            messages: messages,
-            announcements: announcements
-        }
+                await browser.close();
+
+                return {
+                    grades: grades,
+                    messages: messages,
+                    announcements: announcements
+                }
+            })
+        );
+
+        return result;
     }
 
-    async getGrades() {
-        const page = await this.#login();
+    async getGrades(credentials) {
+        const browser = await this.#createBrowser();
+
+        const page = await this.#login(browser, credentials);
 
         const grades = await this.#gradesParse(page);
 
-        await page.close();
+        await browser.close();
 
         return grades;
     }
 
-    async getGradeInfo(gradeInfoPath) {
-        const page = await this.#login();
+    async getGradeInfo(credentials, gradeInfoPath) {
+        const browser = await this.#createBrowser();
+
+        const page = await this.#login(browser, credentials);
 
         const gradeInfo = await this.#gradeInfoParse(page, gradeInfoPath);
+
+        await browser.close();
 
         return gradeInfo;
     }
 
-    async getMessages() {
-        const page = await this.#login();
+    async getMessages(credentials) {
+        const browser = await this.#createBrowser();
+
+        const page = await this.#login(browser, credentials);
 
         const messages = await this.#messagesParse(page);
 
-        await page.close();
+        await browser.close();
 
         return messages;
     }
 
-    async getMessageContent(messageContentPath) {
-        const page = await this.#login();
+    async getMessageContent(credentials, messageContentPath) {
+        const browser = await this.#createBrowser();
+
+        const page = await this.#login(browser, credentials);
 
         const messageContent = await this.#messageContentParse(page, messageContentPath);
 
-        await page.close();
+        await browser.close();
 
         return messageContent;
     }
 
-    async getAnnouncements(){
+    async getAnnouncements(credentials){
+        const browser = await this.#createBrowser();
 
-        const page = await this.#login();
+        const page = await this.#login(browser, credentials);
 
         const announcements = await this.#announcementsParse(page);
 
-        await page.close();
+        await browser.close();
 
         return announcements;
 
     }
 
-    async #login() {
-        const page = await this.#browser.newPage();
+    async #login(browser, credentials) {
+        const page = await browser.newPage();
 
         await page.goto('https://adfslight.edukacja.gorzow.pl/LoginPage.aspx?ReturnUrl=%2f%3fwa%3dwsignin1.0%26wtrealm%3dhttps%253a%252f%252faplikacje.edukacja.gorzow.pl%253a443%252f%26wctx%3drm%253d0%2526id%253dpassive%2526ru%253d%25252f%26wct%3d2025-11-03T20%253a54%253a46Z%26rt%3d0%26rs%3d1%26fr%3d1');
-        await page.type('#Username', process.env.lib_Username);
-        await page.type('#Password', process.env.lib_Password);
+        await page.type('#Username', credentials[0]);
+        await page.type('#Password', credentials[1]);
         page.click('button.submit-button.box-line');
         await page.waitForSelector('figure.figureContainer.gorzowyellow');
         page.click('figure.figureContainer.gorzowyellow');
@@ -258,5 +273,11 @@ export default class LibrusAPI {
         }
 
         return finalObject;
+    }
+
+    async #createBrowser() {
+        return await puppeteer.launch({
+            headless: false
+        });
     }
 }
