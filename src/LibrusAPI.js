@@ -44,7 +44,7 @@ export default class LibrusAPI {
 
         const grades = await this.#gradesParse(page);
 
-        await browser.close();
+        await browser.close()
 
         return grades;
     }
@@ -107,8 +107,8 @@ export default class LibrusAPI {
         page.click('button.submit-button.box-line');
         await page.waitForSelector('figure.figureContainer.gorzowyellow');
         page.click('figure.figureContainer.gorzowyellow');
-        await page.waitForNavigation({ waitUntil: 'networkidle0' });
-        await page.waitForNavigation({ waitUntil: 'networkidle0' });
+        await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
+        await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
 
         return page;
     }
@@ -163,7 +163,7 @@ export default class LibrusAPI {
             semester1Grades.push(subject[1]);
             proposedMidtermGrades.push(subject[2][0]);
             midtermGrades.push(subject[3][0]);
-            semester2Grades.push(subject[4]);
+            semester2Grades.push(subject[4][0]);
             proposedFinalGrades.push(subject[5][0]);
             finalGrades.push(subject[6][0]);
         }
@@ -199,7 +199,7 @@ export default class LibrusAPI {
     async #messagesParse(page) {
         page.click('#icon-wiadomosci');
 
-        await page.waitForNavigation({ waitUntil: 'networkidle0' });
+        await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
 
         const messages = await page.$$eval('table.decorated.stretch > tbody > tr', 
             trs => {
@@ -241,7 +241,7 @@ export default class LibrusAPI {
 
         page.click('#icon-ogloszenia');
 
-        await page.waitForNavigation({ waitUntil: 'networkidle0' });
+        await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
 
         const announcementTopics = await page.$$eval('table.decorated.big.center.printable.margin-top > thead > tr > td', 
             tds => tds.map(td=>td.textContent.trim())
