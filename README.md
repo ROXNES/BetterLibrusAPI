@@ -4,6 +4,10 @@
 ![downloads](https://img.shields.io/npm/dt/better-librus-api)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
+## NOTE
+
+For some reason I forgot it only works for either all or one school in Gorzów Wielkopolski. I will try to make it work for every school. If you're using Librus Syngeria in your school, please contact **ROXNES - roxnes.business@gmail.com**
+
 ## Description
 
 BetterLibrusAPI is a node package API that scrapes Librus data (like grades, messages, announcements etc.) from specified accounts.\
@@ -21,6 +25,7 @@ This project is the API part. The server and the app will be done separately, bu
 - get announcements
 - get grade info
 - get message content
+- open headless browsers
 
 ### Planned
 - get attendance
@@ -28,7 +33,6 @@ This project is the API part. The server and the app will be done separately, bu
 - get timetable
 - get homework
 - send messages
-- open headless browsers
 
 ## Installation
 In terminal:
@@ -38,7 +42,7 @@ npm install better-librus-api
 
 **Initializing**
 ```js
-import LibrusAPI from 'librus-api';
+import LibrusAPI from 'better-librus-api';
 
 const api = await LibrusAPI.create(credentialsArray);
 ```
