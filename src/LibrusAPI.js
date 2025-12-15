@@ -1,4 +1,7 @@
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-extra";
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+
+puppeteer.use(StealthPlugin());
 
 export default class LibrusAPI {
     #credentialsArray;
@@ -101,12 +104,11 @@ export default class LibrusAPI {
     async #login(browser, credentials) {
         const page = await browser.newPage();
 
-        await page.goto('https://adfslight.edukacja.gorzow.pl/LoginPage.aspx?ReturnUrl=%2f%3fwa%3dwsignin1.0%26wtrealm%3dhttps%253a%252f%252faplikacje.edukacja.gorzow.pl%253a443%252f%26wctx%3drm%253d0%2526id%253dpassive%2526ru%253d%25252f%26wct%3d2025-11-03T20%253a54%253a46Z%26rt%3d0%26rs%3d1%26fr%3d1');
+        await page.goto('https://synergia.librus.pl/loguj/gorzow_wlkp');
+        await page.waitForSelector('#Username');
         await page.type('#Username', credentials[0]);
         await page.type('#Password', credentials[1]);
         page.click('button.submit-button.box-line');
-        await page.waitForSelector('figure.figureContainer.gorzowyellow');
-        page.click('figure.figureContainer.gorzowyellow');
         await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
         await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
 
@@ -170,15 +172,15 @@ export default class LibrusAPI {
         const finalObject = []
         
         for (let i = 0; i < subjectNames.length; i++) {
-            finalObject.push([
-                subjectNames[i],
-                semester1Grades[i],
-                proposedMidtermGrades[i],
-                midtermGrades[i],
-                semester2Grades[i],
-                proposedFinalGrades[i],
-                finalGrades[i]
-            ]);
+            finalObject.push({
+                name: subjectNames[i],
+                semester1Grades: semester1Grades[i],
+                proposedMidtermGrades: proposedMidtermGrades[i],
+                midtermGrades: midtermGrades[i],
+                semester2Grades: semester2Grades[i],
+                proposedFinalGrades: proposedFinalGrades[i],
+                finalGrades: finalGrades[i]
+            });
         }
         
         return finalObject;
@@ -193,7 +195,15 @@ export default class LibrusAPI {
             })
         )
 
-        return gradeInfo;
+        return {
+            grade: gradeInfo[0],
+            category: gradeInfo[1],
+            date: gradeInfo[2],
+            subjectTeacher: gradeInfo[3],
+            subject: gradeInfo[4],
+            author: gradeInfo[5],
+            comment: gradeInfo[6]
+        };
     }
 
     async #messagesParse(page) {
@@ -213,7 +223,18 @@ export default class LibrusAPI {
             }
         );
 
-        return messages;
+        const finalObject = []
+
+        for (let i = 0; i < messages.length; i++) {
+            finalObject.push({
+                author: messages[i][0],
+                topic: messages[i][1],
+                date: messages[i][2],
+                path: messages[i][3]
+            });
+        }
+
+        return finalObject;
     }
 
     async #messageContentParse(page, messageContentPath) {
@@ -232,8 +253,10 @@ export default class LibrusAPI {
         );
 
         return {
-            messageInfo,
-            messagecontent
+            author: messageInfo[0],
+            topic: messageInfo[1],
+            date: messageInfo[2],
+            message: messagecontent
         }
     }
 
@@ -264,12 +287,12 @@ export default class LibrusAPI {
         const finalObject = [];
 
         for (let i = 0; i < announcementTopics.length; i++) {
-            finalObject.push([
-                announcementTopics[i],
-                announcementContents[i][0],
-                announcementContents[i][1],
-                announcementContents[i][2]
-            ]);
+            finalObject.push({
+                topic: announcementTopics[i],
+                author: announcementContents[i][0],
+                date: announcementContents[i][1],
+                content: announcementContents[i][2]
+            });
         }
 
         return finalObject;
@@ -277,7 +300,7 @@ export default class LibrusAPI {
 
     async #createBrowser() {
         return await puppeteer.launch({
-            headless: false
+            headless: "new"
         });
     }
 }

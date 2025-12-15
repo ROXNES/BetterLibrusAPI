@@ -1,6 +1,6 @@
 {
   "name": "better-librus-api",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "An API that scrapes your Librus data.",
   "main": "src/index.js",
   "type": "module",
@@ -43,6 +43,8 @@
   },
   "homepage": "https://github.com/ROXNES/BetterLibrusAPI#readme",
   "dependencies": {
-    "puppeteer": "^24.33.0"
+    "puppeteer": "^24.33.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   }
 }
