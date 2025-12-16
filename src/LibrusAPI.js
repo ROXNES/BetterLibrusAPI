@@ -101,6 +101,24 @@ export default class LibrusAPI {
 
     }
 
+    async sendMessage(credentials, addressee, topic, message) {
+        const addresseeSplit = addressee.trim().replaceAll(',', '').split(' ');
+
+        if (addresseeSplit.length < 2) throw new Error('The addressee\'s name is too short');
+
+        const browser = await this.#createBrowser();
+
+        const page = await this.#login(browser, credentials);
+        
+        await this.#gotoMessages(page);
+
+        if (await this.#sendMessage(page, addresseeSplit, topic, message) == false) {
+            throw new Error('Addressee not found');
+        }
+
+        await browser.close();
+    }
+
     async #login(browser, credentials) {
         const page = await browser.newPage();
 
@@ -207,9 +225,7 @@ export default class LibrusAPI {
     }
 
     async #messagesParse(page) {
-        page.click('#icon-wiadomosci');
-
-        await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
+        await this.#gotoMessages(page);
 
         const messages = await page.$$eval('table.decorated.stretch > tbody > tr', 
             trs => {
@@ -257,6 +273,90 @@ export default class LibrusAPI {
             topic: messageInfo[1],
             date: messageInfo[2],
             message: messagecontent
+        }
+    }
+
+    async #gotoMessages(page) {
+        page.click('#icon-wiadomosci');
+
+        await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
+    }
+
+    async #sendMessage(page, addressee, topic, message) {
+        page.click('a#wiadomosci-napisz.button.left.blue');
+
+        await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
+
+        let found = undefined;
+
+        let index = 0;
+        while (!found && index <= 7) {
+            await page.reload();
+            await this.#clickAddresseesSection(page, index);
+            found = await this.#checkAddressees(page, addressee);
+            index++;
+        }
+
+        if (!found) {
+            return false;
+        }
+
+        await this.#selectAddressee(page, found);
+
+        await page.type('input#temat', topic.trim());
+        await page.type('textarea#tresc_wiadomosci', message.trim());
+        page.click('input#sendButton');
+        await page.waitForNavigation({ waitUntil: 'networkidle0' });
+    }
+
+    async #clickAddresseesSection(page, index) {
+        const section = ({
+            0: 'radio_wychowawca',
+            1: 'radio_rada_rodzicow',
+            2: 'radio_szkolna_rada_rodzicow',
+            3: 'radio_nauczyciel',
+            4: 'radio_pedagog',
+            5: 'radio_admin',
+            6: 'radio_sekretariat',
+            7: 'radio_sadmin'
+        })[index];
+        page.click(`input#${section}`);
+    }
+
+    async #checkAddressees(page, addressee) {
+        try {
+            await page.waitForSelector('div#adresaci > table.message-recipients-detail > tbody > tr', { timeout: 1000 });
+        } catch (err) {
+            return undefined;
+        }
+
+        const found = await page.$$eval('div#adresaci > table.message-recipients-detail > tbody > tr',
+            (trs, addressee) => trs.map(tr => {
+                const name = tr.children[1].children[0].textContent.trim().replaceAll(',', '').split(' ');
+                let matches = 0;
+                for (let namePart of name) {
+                    for (let addresseePart of addressee) {
+                        if (addresseePart === namePart) {
+                            matches++;
+                        }
+                    }
+                }
+                if (matches >= 2) {
+                    return tr.children[1].children[0].textContent;
+                }
+            }), addressee
+        );
+
+        return found.filter(item => item != null)[0];
+    }
+
+    async #selectAddressee(page, name) {
+        const needsChecking = await page.$$eval('div#adresaci > table.message-recipients-detail > tbody > tr > td > label',
+            labels => labels.length > 1
+        );
+
+        if (needsChecking){
+            await page.locator(`label ::-p-text(${name})`).click();
         }
     }
 
