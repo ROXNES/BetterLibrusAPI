@@ -44,7 +44,7 @@ npm install better-librus-api
 ```js
 import LibrusAPI from 'better-librus-api';
 
-const api = await LibrusAPI.create(credentialsArray);
+const api = new LibrusAPI(credentialsArray);
 ```
 
 ### Documentation soon
