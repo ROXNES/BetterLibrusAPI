@@ -10,29 +10,28 @@ export default class LibrusAPI {
         this.#credentialsArray = credentialsArray;
     }
 
-    static async create(credentialsArray) {
-        return new LibrusAPI(credentialsArray);
-    }
-
     async getAllData() {
         const result = await Promise.all(
             this.#credentialsArray.map(async credentials => {
-                const browser = await this.#createBrowser();
+                let browser;
+                try {
+                    browser = await this.#createBrowser();
 
-                const page = await this.#login(browser, credentials);
+                    const page = await this.#login(browser, credentials);
 
-                const grades = await this.#gradesParse(page);
+                    const grades = await this.#getGrades(page);
 
-                const messages = await this.#messagesParse(page);
+                    await this.#gotoMessages(page);
 
-                const announcements = await this.#announcementsParse(page);
+                    const messages = await this.#messagesParse(page);
 
-                await browser.close();
+                    const announcements = await this.#announcementsParse(page);
 
-                return {
-                    grades: grades,
-                    messages: messages,
-                    announcements: announcements
+                    return {grades, messages, announcements};
+                }finally{
+                    if (browser){
+                        await browser.close();
+                    }
                 }
             })
         );
@@ -41,82 +40,47 @@ export default class LibrusAPI {
     }
 
     async getGrades(credentials) {
-        const browser = await this.#createBrowser();
-
-        const page = await this.#login(browser, credentials);
-
-        const grades = await this.#gradesParse(page);
-
-        await browser.close()
-
-        return grades;
+        return this.#withBrowser(credentials, async page => 
+            this.#getGrades(page)
+        );
     }
 
     async getGradeInfo(credentials, gradeInfoPath) {
-        const browser = await this.#createBrowser();
-
-        const page = await this.#login(browser, credentials);
-
-        const gradeInfo = await this.#gradeInfoParse(page, gradeInfoPath);
-
-        await browser.close();
-
-        return gradeInfo;
+        return this.#withBrowser(credentials, async page => {
+            await page.goto('https://synergia.librus.pl' + gradeInfoPath);
+            return this.#gradeInfoParse(page);
+        });
     }
 
     async getMessages(credentials) {
-        const browser = await this.#createBrowser();
-
-        const page = await this.#login(browser, credentials);
-
-        const messages = await this.#messagesParse(page);
-
-        await browser.close();
-
-        return messages;
+        return this.#withBrowser(credentials, async page => {
+            await this.#gotoMessages(page);
+            return this.#messagesParse(page);
+        });
     }
 
     async getMessageContent(credentials, messageContentPath) {
-        const browser = await this.#createBrowser();
-
-        const page = await this.#login(browser, credentials);
-
-        const messageContent = await this.#messageContentParse(page, messageContentPath);
-
-        await browser.close();
-
-        return messageContent;
+        return this.#withBrowser(credentials, async page => {
+            await page.goto('https://synergia.librus.pl' + messageContentPath);
+            return this.#messageContentParse(page, messageContentPath);
+        });
     }
 
     async getAnnouncements(credentials){
-        const browser = await this.#createBrowser();
-
-        const page = await this.#login(browser, credentials);
-
-        const announcements = await this.#announcementsParse(page);
-
-        await browser.close();
-
-        return announcements;
-
+        return this.#withBrowser(credentials, async page => 
+            this.#announcementsParse(page)
+        );
     }
 
     async sendMessage(credentials, addressee, topic, message) {
         const addresseeSplit = addressee.trim().replaceAll(',', '').split(' ');
 
-        if (addresseeSplit.length < 2) throw new Error('The addressee\'s name is too short');
+        if (addresseeSplit.length < 2) return;
 
-        const browser = await this.#createBrowser();
-
-        const page = await this.#login(browser, credentials);
-        
-        await this.#gotoMessages(page);
-
-        if (await this.#sendMessage(page, addresseeSplit, topic, message) == false) {
-            throw new Error('Addressee not found');
-        }
-
-        await browser.close();
+        return this.#withBrowser(credentials, async page => {
+            await this.#gotoMessages(page);
+            return this.#sendMessage(page, addresseeSplit, topic, message);
+        });
     }
 
     async #login(browser, credentials) {
@@ -127,14 +91,20 @@ export default class LibrusAPI {
         await page.type('#Username', credentials[0]);
         await page.type('#Password', credentials[1]);
         page.click('button.submit-button.box-line');
-        await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
-        await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
+        await page.waitForNavigation({ waitUntil: 'networkidle0' });
+        await page.waitForNavigation({ waitUntil: 'networkidle0' });
 
         return page;
     }
 
-    async #gradesParse(page) {
-        const subjects = await page.$$eval('tbody > tr:not(:has(table)):not([class^="przedmioty_"]):not(.detail-grades):not(.bolded)', 
+    async #getGrades(page) {
+        const subjects = await this.#getSubjects(page);
+
+        return this.#gradesParse(subjects);
+    }
+    
+    async #getSubjects(page) {
+        return page.$$eval('tbody > tr:not(:has(table)):not([class^="przedmioty_"]):not(.detail-grades):not(.bolded)', 
             trs => {
                 const filtered = trs
                 .filter(tr => tr.children.length >= 2)
@@ -157,10 +127,14 @@ export default class LibrusAPI {
 
                     return gradeArray;
                 }));
-                return filtered.slice(3, filtered.length - 4);
+                const EMPTY_BEGINNING = 3;
+                const EMPTY_END = filtered.length - 4;
+                return filtered.slice(EMPTY_BEGINNING, EMPTY_END);
             }
         );
+    }
 
+    #gradesParse(subjects) {
         const subjectNames = [];
         const semester1Grades = [];
         const proposedMidtermGrades = [];
@@ -169,15 +143,16 @@ export default class LibrusAPI {
         const proposedFinalGrades = [];
         const finalGrades = [];
 
-        for (let i = 0; i < subjects.length; i++) {
-            let subject = subjects[i]
-            if(subject.length <= 5) {
-                subjects.splice(i, 1);
-            }
+
+        subjects = subjects.filter(subject => subject.length > 5);
+        for (let subject of subjects) {
             subject = subject.slice(1);
-            subject.splice(2, 1);
-            subject.splice(5, 1);
-            subject.splice(6, 1);
+
+            const EMPTY_INDEXES = [8, 6, 2];
+
+            for (const index of EMPTY_INDEXES) {
+                subject.splice(index, 1);
+            }
             subject[0] = subject[0][0];
             subjectNames.push(subject[0][0]);
             semester1Grades.push(subject[1]);
@@ -200,13 +175,11 @@ export default class LibrusAPI {
                 finalGrades: finalGrades[i]
             });
         }
-        
+
         return finalObject;
     }
 
-    async #gradeInfoParse(page, gradeInfoPath) {
-        await page.goto('https://synergia.librus.pl' + gradeInfoPath);
-
+    async #gradeInfoParse(page) {
         const gradeInfo = await page.$$eval('table.decorated.medium.center > tbody > tr > td',
             tds => tds.map(td => {
                 return (td.textContent.trim() !== '') ? td.textContent.trim() : ((td.children[0].getAttribute('src') == '/images/aktywne.png') ? true : false);
@@ -225,8 +198,6 @@ export default class LibrusAPI {
     }
 
     async #messagesParse(page) {
-        await this.#gotoMessages(page);
-
         const messages = await page.$$eval('table.decorated.stretch > tbody > tr', 
             trs => {
                 const filtered = trs
@@ -253,9 +224,7 @@ export default class LibrusAPI {
         return finalObject;
     }
 
-    async #messageContentParse(page, messageContentPath) {
-        await page.goto('https://synergia.librus.pl' + messageContentPath);
-
+    async #messageContentParse(page) {
         const messageInfo = await page.$$eval('td > table.stretch > tbody > tr:has(.medium.left)',
              trs => {
                 const filtered = trs
@@ -264,7 +233,7 @@ export default class LibrusAPI {
             }
         );
 
-        const messagecontent = await page.$eval('.container-message-content',
+        const message = await page.$eval('.container-message-content',
             content => content.textContent.trim()
         );
 
@@ -272,25 +241,28 @@ export default class LibrusAPI {
             author: messageInfo[0],
             topic: messageInfo[1],
             date: messageInfo[2],
-            message: messagecontent
+            message
         }
     }
 
     async #gotoMessages(page) {
         page.click('#icon-wiadomosci');
 
-        await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
+        await page.waitForNavigation({ waitUntil: 'networkidle0' });
     }
 
     async #sendMessage(page, addressee, topic, message) {
         page.click('a#wiadomosci-napisz.button.left.blue');
 
-        await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
+        await page.waitForNavigation({ waitUntil: 'networkidle0' });
 
-        let found = undefined;
+        let found = false;
 
         let index = 0;
-        while (!found && index <= 7) {
+
+        const AMOUNT_OF_SECTIONS = 7;
+
+        while (!found && index <= AMOUNT_OF_SECTIONS) {
             await page.reload();
             await this.#clickAddresseesSection(page, index);
             found = await this.#checkAddressees(page, addressee);
@@ -305,8 +277,17 @@ export default class LibrusAPI {
 
         await page.type('input#temat', topic.trim());
         await page.type('textarea#tresc_wiadomosci', message.trim());
+
+        let beforeUrl = page.url();
+
         page.click('input#sendButton');
         await page.waitForNavigation({ waitUntil: 'networkidle0' });
+
+        if (beforeUrl !== page.url()) {
+            return "Sent";
+        }else{
+            return "Unable to send";
+        }
     }
 
     async #clickAddresseesSection(page, index) {
@@ -327,7 +308,7 @@ export default class LibrusAPI {
         try {
             await page.waitForSelector('div#adresaci > table.message-recipients-detail > tbody > tr', { timeout: 1000 });
         } catch (err) {
-            return undefined;
+            return false;
         }
 
         const found = await page.$$eval('div#adresaci > table.message-recipients-detail > tbody > tr',
@@ -364,7 +345,7 @@ export default class LibrusAPI {
 
         page.click('#icon-ogloszenia');
 
-        await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 0 });
+        await page.waitForNavigation({ waitUntil: 'networkidle0'});
 
         const announcementTopics = await page.$$eval('table.decorated.big.center.printable.margin-top > thead > tr > td', 
             tds => tds.map(td=>td.textContent.trim())
@@ -399,8 +380,21 @@ export default class LibrusAPI {
     }
 
     async #createBrowser() {
-        return await puppeteer.launch({
+        return puppeteer.launch({
             headless: "new"
         });
+    }
+
+    async #withBrowser(credentials, fn) {
+        let browser;
+        try{
+            browser = await this.#createBrowser();
+            const page = await this.#login(browser, credentials);
+            return await fn(page);
+        }finally{
+            if (browser){
+                await browser.close();
+            }
+        }
     }
 }

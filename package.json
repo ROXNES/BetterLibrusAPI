@@ -43,7 +43,7 @@
   },
   "homepage": "https://github.com/ROXNES/BetterLibrusAPI#readme",
   "dependencies": {
-    "puppeteer": "^24.33.0",
+    "puppeteer": "^24.33.1",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
   }
